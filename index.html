@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>属于自己的芝子 - 公众号排版台</title>
+  <meta name="description" content="一个面向微信公众号写作的本地 Markdown 排版台，支持实时预览、样式调整、图片处理和富文本复制。">
+  <meta name="keywords" content="公众号排版,Markdown编辑器,微信排版,Obsidian写作,富文本复制">
+  <meta name="author" content="属于自己的芝子">
+
+  <link rel="icon" type="image/jpeg" href="assets/images/avatar.jpg">
+  <link rel="stylesheet" href="assets/styles/base.css?v=20260707-cleanup">
+  <link rel="stylesheet" href="assets/styles/editor.css">
+  <link rel="stylesheet" href="assets/styles/panel.css?v=20260707-cleanup">
+  <link rel="stylesheet" href="assets/vendor/katex.min.css">
+  <link rel="stylesheet" href="assets/vendor/texmath.min.css">
+
+  <script src="assets/vendor/markdown-it.min.js"></script>
+  <script src="assets/vendor/katex.min.js"></script>
+  <script src="assets/vendor/texmath.min.js"></script>
+  <script>
+    window.MathJax = {
+      startup: {
+        typeset: false
+      },
+      svg: {
+        fontCache: 'none'
+      }
+    };
+  </script>
+  <script id="mathjax-script" defer src="assets/vendor/tex-svg-full.js"></script>
+  <script src="assets/vendor/highlight.min.js"></script>
+  <script src="assets/vendor/turndown.js"></script>
+  <script src="assets/vendor/vue.global.prod.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <script>
+    if (window.location.protocol === 'file:') {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.innerHTML = `
+          <main style="min-height:100vh;display:grid;place-items:center;background:#f7f2ee;color:#24312c;font-family:'Noto Sans SC',sans-serif;padding:32px;">
+            <section style="max-width:720px;background:#fff;border-radius:28px;padding:40px;box-shadow:0 24px 80px rgba(36,49,44,.12);line-height:1.9;">
+              <p style="margin:0 0 10px;color:#4f7f5f;font-weight:700;letter-spacing:.08em;">属于自己的芝子 · 公众号排版台</p>
+              <h1 style="margin:0 0 18px;font-size:32px;line-height:1.25;">请通过本地服务打开这个页面</h1>
+              <p style="margin:0 0 18px;">你现在是用 <code>file://</code> 直接打开，所以浏览器会拦截模块脚本，页面就会露出花括号模板文本。这个不是文章内容乱码，是应用没有启动。</p>
+              <p style="margin:0 0 12px;">在当前项目目录运行：</p>
+              <pre style="margin:0 0 18px;padding:16px 18px;border-radius:14px;background:#24312c;color:#fff;overflow:auto;">python -m http.server 8765</pre>
+              <p style="margin:0 0 22px;">然后打开：</p>
+              <a href="http://127.0.0.1:8765/index.html" style="display:inline-block;padding:12px 18px;border-radius:999px;background:#4f7f5f;color:#fff;text-decoration:none;font-weight:700;">打开公众号排版台</a>
+            </section>
+          </main>
+        `;
+      });
+      throw new Error('Please open this app through a local HTTP server.');
+    }
+  </script>
+  <div id="app">
+    <header class="header">
+      <div class="header-left">
+        <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen" title="文档管理">
+          <svg class="lucide lucide-panel-left-open" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path><path d="m14 9 3 3-3 3"></path></svg>
+        </button>
+        <div class="logo">
+          <img src="assets/images/avatar.jpg" alt="属于自己的芝子头像">
+          <span>属于自己的芝子</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <nav class="header-nav">
+          <button class="header-nav-btn" :class="{ active: settingsOpen }" @click="toggleSettingsPanel">
+            <svg class="lucide lucide-settings-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
+            设置
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <div class="main-area has-right-panel">
+      <transition name="sidebar">
+        <aside v-if="sidebarOpen" class="sidebar">
+          <div class="sidebar-section">
+            <button class="sidebar-action-btn primary" @click="createNewDocument('', '')">
+              <svg class="lucide lucide-file-plus-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M12 18v-6"></path><path d="M9 15h6"></path></svg>
+              新增文档
+            </button>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">文档列表</div>
+            <input
+              v-model="documentSearch"
+              class="sidebar-search-input"
+              type="text"
+              placeholder="搜索文档"
+            >
+            <div class="sidebar-doc-list">
+              <div
+                v-for="doc in filteredDocuments"
+                :key="doc.id"
+                class="sidebar-doc-item"
+                :class="{ active: activeDocumentId === doc.id }"
+                @click="switchDocument(doc.id)"
+              >
+                <svg class="lucide lucide-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+                <div class="sidebar-doc-meta">
+                  <div class="sidebar-doc-title-row">
+                    <span class="sidebar-doc-title">{{ getDocumentDisplayTitle(doc) }}</span>
+                    <span v-if="doc.dirty" class="sidebar-doc-dirty" title="未保存"></span>
+                  </div>
+                  <span class="sidebar-doc-time">保存于 {{ formatDateTime(doc.updatedAt) }}</span>
+                  <div class="sidebar-doc-actions">
+                    <button class="sidebar-icon-btn" @click.stop="duplicateDocument(doc.id)" title="复制文档">
+                      <svg class="lucide lucide-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </button>
+                    <button class="sidebar-icon-btn danger" @click.stop="showDeleteConfirm(doc)" title="删除文档">
+                      <svg class="lucide lucide-trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">操作</div>
+            <button class="sidebar-action-btn" @click="$refs.mdUploadSidebar.click()">
+              <svg class="lucide lucide-file-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="m12 18 3-3"></path><path d="m12 18-3-3"></path><path d="M12 12v6"></path></svg>
+              导入 .md
+            </button>
+            <input ref="mdUploadSidebar" type="file" accept=".md,.markdown" @change="handleFileUpload" style="display: none;">
+
+            <button class="sidebar-action-btn" @click="exportMarkdown">
+              <svg class="lucide lucide-file-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="m12 12 3 3"></path><path d="m12 12-3 3"></path><path d="M12 18v-6"></path></svg>
+              导出 Markdown
+            </button>
+            <button class="sidebar-action-btn" @click="exportPDF">
+              <svg class="lucide lucide-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+              导出 PDF
+            </button>
+            <button class="sidebar-action-btn" @click="exportHTML">
+              <svg class="lucide lucide-code-xml" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>
+              导出 HTML
+            </button>
+          </div>
+        </aside>
+      </transition>
+
+      <div class="editor-panel" :style="editorWidth ? { flex: 'none', width: editorWidth + '%' } : {}">
+        <div class="editor-composer">
+          <div class="editor-header">
+          <input
+            v-model="currentDocumentTitle"
+            class="document-title-input"
+            type="text"
+            placeholder="输入文档标题"
+          >
+          <div class="editor-toolbar">
+            <button class="editor-tool-btn" title="H1" @mousedown.prevent @click="insertHeading(1)"><svg class="lucide lucide-heading-1" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h8"></path><path d="M4 18V6"></path><path d="M12 18V6"></path><path d="m17 12 3-2v8"></path></svg></button>
+            <button class="editor-tool-btn" title="H2" @mousedown.prevent @click="insertHeading(2)"><svg class="lucide lucide-heading-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h8"></path><path d="M4 18V6"></path><path d="M12 18V6"></path><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"></path></svg></button>
+            <button class="editor-tool-btn" title="H3" @mousedown.prevent @click="insertHeading(3)"><svg class="lucide lucide-heading-3" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h8"></path><path d="M4 18V6"></path><path d="M12 18V6"></path><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"></path><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"></path></svg></button>
+            <button class="editor-tool-btn" title="加粗" @mousedown.prevent @click="wrapSelection('**', '**')"><svg class="lucide lucide-bold" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"></path></svg></button>
+            <button class="editor-tool-btn" title="斜体" @mousedown.prevent @click="wrapSelection('*', '*')"><svg class="lucide lucide-italic" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" x2="10" y1="4" y2="4"></line><line x1="14" x2="5" y1="20" y2="20"></line><line x1="15" x2="9" y1="4" y2="20"></line></svg></button>
+            <button class="editor-tool-btn" title="下划线" @mousedown.prevent @click="insertUnderline"><svg class="lucide lucide-underline" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v6a6 6 0 0 0 12 0V4"></path><line x1="4" x2="20" y1="20" y2="20"></line></svg></button>
+            <button class="editor-tool-btn" title="行内代码" @mousedown.prevent @click="insertInlineCode"><svg class="lucide lucide-code" viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
+            <button class="editor-tool-btn" title="链接" @mousedown.prevent @click="insertLink"><svg class="lucide lucide-link" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
+            <button class="editor-tool-btn" title="有序列表" @mousedown.prevent @click="insertOrderedList"><svg class="lucide lucide-list-ordered" viewBox="0 0 24 24" aria-hidden="true"><line x1="10" x2="21" y1="6" y2="6"></line><line x1="10" x2="21" y1="12" y2="12"></line><line x1="10" x2="21" y1="18" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg></button>
+            <button class="editor-tool-btn" title="无序列表" @mousedown.prevent @click="insertUnorderedList"><svg class="lucide lucide-list" viewBox="0 0 24 24" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"></line><line x1="8" x2="21" y1="12" y2="12"></line><line x1="8" x2="21" y1="18" y2="18"></line><line x1="3" x2="3.01" y1="6" y2="6"></line><line x1="3" x2="3.01" y1="12" y2="12"></line><line x1="3" x2="3.01" y1="18" y2="18"></line></svg></button>
+            <button class="editor-tool-btn" title="引用" @mousedown.prevent @click="insertQuote"><svg class="lucide lucide-quote" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"></path><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"></path></svg></button>
+            <button class="editor-tool-btn" title="分割线" @mousedown.prevent @click="insertDivider"><svg class="lucide lucide-minus" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+            <button class="editor-tool-btn" title="代码块" @mousedown.prevent @click="insertCodeBlock"><svg class="lucide lucide-file-code" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 12.5 8 15l2 2.5"></path><path d="m14 12.5 2 2.5-2 2.5"></path></svg></button>
+            <button class="editor-tool-btn" title="图片语法" @mousedown.prevent @click="insertImageSyntax"><svg class="lucide lucide-image" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg></button>
+            <button class="editor-tool-btn" title="上传图片" @mousedown.prevent @click="$refs.editorImageUpload.click()"><svg class="lucide lucide-image-up" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"></path><path d="m14 19.5 3-3 3 3"></path><path d="M17 22v-5.5"></path><circle cx="9" cy="9" r="2"></circle></svg></button>
+            <button class="editor-tool-btn" title="表格" @mousedown.prevent @click="insertTable"><svg class="lucide lucide-table" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"></path><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M3 15h18"></path></svg></button>
+          </div>
+          <input ref="editorImageUpload" type="file" accept="image/*" @change="handleToolbarImageUpload" style="display:none;">
+        </div>
+
+        <div class="markdown-input-container">
+          <textarea
+            v-model="markdownInput"
+            class="markdown-input"
+            :class="{ 'drag-over': isDraggingOver }"
+            @paste="onPaste"
+            @drop="handleDrop"
+            @dragover="handleDragOver"
+            @dragenter="handleDragEnter"
+            @dragleave="handleDragLeave"
+            @keydown="handleKeydown"
+            @focus="syncEditorSelection"
+            @click="syncEditorSelection"
+            @mouseup="syncEditorSelection"
+            @keyup="syncEditorSelection"
+            @select="syncEditorSelection"
+            @input="syncEditorSelection"
+            spellcheck="false"
+            placeholder="# 在这里输入 Markdown 内容"
+          ></textarea>
+        </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" data-handle="editor-preview"></div>
+
+      <div class="preview-panel">
+        <div class="preview-composer">
+            <div class="preview-toolbar">
+              <div class="preview-toolbar-left">
+                <div class="device-toggle">
+                  <button class="device-toggle-btn" :class="{ active: previewMode === 'mobile' }" @click="previewMode = 'mobile'" title="手机预览">
+                    <svg class="lucide lucide-smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><path d="M12 18h.01"></path></svg>
+                  </button>
+                  <button class="device-toggle-btn" :class="{ active: previewMode === 'tablet' }" @click="previewMode = 'tablet'" title="iPad 预览">
+                    <svg class="lucide lucide-tablet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M12 18h.01"></path></svg>
+                  </button>
+                  <button class="device-toggle-btn" :class="{ active: previewMode === 'desktop' }" @click="previewMode = 'desktop'" title="桌面预览">
+                    <svg class="lucide lucide-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8"></path><path d="M12 17v4"></path></svg>
+                  </button>
+                </div>
+                <button class="device-toggle-btn toc-toggle-btn" :class="{ active: tocVisible }" @click="toggleToc" title="内容目录">
+                  <svg class="lucide lucide-list-tree" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 6H8"></path><path d="M21 12h-8"></path><path d="M21 18h-8"></path><path d="M3 6h1"></path><path d="M3 12h1"></path><path d="M3 18h1"></path></svg>
+                </button>
+              </div>
+
+              <div class="copy-buttons">
+                <button class="copy-btn copy-btn-secondary" :class="{ success: mdCopySuccess }" :disabled="!markdownInput.trim()" @click="copyMarkdown">
+                  <svg class="lucide lucide-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+                  {{ mdCopySuccess ? '已复制 MD' : '一键复制 MD' }}
+                </button>
+                <button class="copy-btn" :class="{ success: copySuccess }" :disabled="!renderedContent" @click="doCopy">
+                  <svg class="lucide lucide-copy" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  {{ copySuccess ? '已复制' : '复制到公众号' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="preview-content" :class="{ 'toc-open': tocVisible && renderedContent }">
+              <div v-if="!renderedContent" class="empty-state">
+                <svg class="lucide lucide-file-pen-line empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h-6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8l6 6v3"></path><path d="M14 2v6h6"></path><path d="M15 18.5 18.5 15"></path><path d="M18 14.5 20.5 17"></path><path d="M13 20l1.5-4.5"></path></svg>
+                <h3>开始编辑</h3>
+                <p>左侧输入 Markdown，右侧实时预览。</p>
+              </div>
+              <template v-else>
+                <div class="preview-container" :class="{ 'mobile-mode': previewMode === 'mobile', 'tablet-mode': previewMode === 'tablet' }" v-html="renderedContent"></div>
+                <aside v-if="tocVisible" class="preview-toc" aria-label="内容目录">
+                  <div class="preview-toc-title">目录</div>
+                  <div v-if="tocItems.length" class="preview-toc-list">
+                    <button
+                      v-for="item in tocItems"
+                      :key="item.id"
+                      class="preview-toc-item"
+                      :class="'level-' + item.level"
+                      @click="scrollToTocHeading(item.id)"
+                    >
+                      {{ item.text }}
+                    </button>
+                  </div>
+                  <p v-else class="preview-toc-empty">暂无 H1-H3 标题</p>
+                </aside>
+              </template>
+            </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" data-handle="preview-right"></div>
+
+        <div class="right-panel" :style="rightPanelWidth ? { width: rightPanelWidth + 'px' } : {}">
+          <div class="right-panel-tabs">
+            <button class="right-panel-tab" :class="{ active: activePanel === 'theme' }" @click="setLayoutPanelTab('theme')">
+              <svg class="lucide lucide-palette"  xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-palette-icon lucide-palette"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+              主题
+            </button>
+            <button class="right-panel-tab" :class="{ active: activePanel === 'code' }" @click="setLayoutPanelTab('code')">
+              <svg class="lucide lucide-code-xml" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>
+              代码
+            </button>
+            <button class="right-panel-tab" :class="{ active: activePanel === 'layout' }" @click="setLayoutPanelTab('layout')">
+              <svg class="lucide lucide-sliders-horizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg>
+              排版
+            </button>
+            <button class="right-panel-tab" :class="{ active: activePanel === 'image' }" @click="setLayoutPanelTab('image')">
+              <svg class="lucide lucide-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
+              图片
+            </button>
+          </div>
+
+          <div class="right-panel-body">
+            <template v-if="activePanel === 'theme'">
+              <div class="theme-panel-stack">
+                <div class="theme-panel-actions">
+                  <button class="save-layout-preset-btn" @click="openSaveLayoutPresetDialog">
+                    保存当前排版
+                  </button>
+                  <p class="theme-panel-note">保存当前主题、字体、字号、间距、标题颜色、图片样式和代码块样式。</p>
+                </div>
+
+                <div class="theme-grid" v-if="hasLayoutPresets">
+                  <div class="theme-category-label">我的主题</div>
+                  <div
+                    v-for="preset in layoutPresets"
+                    :key="preset.id"
+                    class="theme-card custom-theme-card"
+                    title="单击应用，双击或右键重命名"
+                    @click="applyLayoutPreset(preset)"
+                    @dblclick.stop="openRenameLayoutPresetDialog(preset)"
+                    @contextmenu.prevent.stop="openRenameLayoutPresetDialog(preset)"
+                  >
+                    <span class="theme-card-name">{{ preset.name }}</span>
+                    <button class="theme-card-delete" title="删除这个排版" @click.stop="deleteLayoutPreset(preset.id)">
+                      ×
+                    </button>
+                  </div>
+                </div>
+
+                <div class="theme-grid">
+                <template v-for="cat in categorizedThemes" :key="cat.category">
+                  <div class="theme-category-label">{{ cat.category }}</div>
+                  <div
+                    v-for="theme in cat.themes"
+                    :key="theme.key"
+                    class="theme-card"
+                    :class="{ active: currentStyle === theme.key }"
+                    @click="selectTheme(theme.key)"
+                  >
+                    <span class="theme-card-name">{{ theme.name }}</span>
+                    <span v-if="theme.recommended" class="theme-card-badge">推荐</span>
+                  </div>
+                </template>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="activePanel === 'code'">
+              <div class="code-panel-stack">
+                <div class="code-panel-section">
+                  <div class="code-panel-section-title">代码块主题</div>
+                  <div class="code-theme-grid">
+                    <div
+                      v-for="ct in codeThemeList"
+                      :key="ct.key"
+                      class="code-theme-card"
+                      :class="{ active: currentCodeTheme === ct.key }"
+                      @click="selectCodeTheme(ct.key)"
+                    >
+                      <div
+                        class="code-theme-preview"
+                        :style="{
+                          background: ct.preview.bg,
+                          borderColor: ct.preview.borderColor,
+                          color: ct.preview.textColor
+                        }"
+                      >
+                        <div
+                          class="code-theme-preview-topbar"
+                          :style="{ background: ct.preview.headerBg }"
+                        >
+                          <span class="code-theme-preview-dot dot-red"></span>
+                          <span class="code-theme-preview-dot dot-amber"></span>
+                          <span class="code-theme-preview-dot dot-green"></span>
+                        </div>
+                        <div class="code-theme-preview-code">
+                          <div
+                            v-for="(line, lineIndex) in ct.preview.lines"
+                            :key="`${ct.key}-line-${lineIndex}`"
+                            class="code-theme-preview-line"
+                          >
+                            <span
+                              v-for="(segment, segmentIndex) in line"
+                              :key="`${ct.key}-seg-${lineIndex}-${segmentIndex}`"
+                              class="code-theme-preview-segment"
+                              :style="{ color: segment.color }"
+                            >{{ segment.text }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="code-theme-meta">
+                        <div class="code-theme-name">{{ ct.name }}</div>
+                        <div class="code-theme-desc">{{ ct.description }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </template>
+
+            <template v-if="activePanel === 'layout'">
+              <div class="misc-panel-stack">
+                <div class="misc-panel-section">
+                  <div class="code-panel-section-title">文章排版</div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-setting-label">正文字体</div>
+                    <div class="misc-button-grid misc-button-grid-font-family">
+                      <button
+                        v-for="option in bodyFontFamilyOptions"
+                        :key="`body-font-family-${option.value}`"
+                        class="segmented-option-btn"
+                        :class="{ active: (displaySettings.bodyFontFamily || 'theme') === option.value }"
+                        @click="setBodyFontFamily(option.value)"
+                      >
+                        <span>{{ option.label }}</span>
+                        <small>{{ option.meta }}</small>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-setting-label">引用字体</div>
+                    <div class="misc-button-grid misc-button-grid-font-family">
+                      <button
+                        v-for="option in bodyFontFamilyOptions"
+                        :key="`quote-font-family-${option.value}`"
+                        class="segmented-option-btn"
+                        :class="{ active: (displaySettings.quoteFontFamily || 'theme') === option.value }"
+                        @click="setQuoteFontFamily(option.value)"
+                      >
+                        <span>{{ option.label }}</span>
+                        <small>{{ option.meta }}</small>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-range-header">
+                      <div class="misc-setting-label">正文字号</div>
+                      <span class="misc-range-value">{{ displaySettings.bodyFontSize }}px</span>
+                    </div>
+                    <div class="misc-range-input">
+                      <input type="range" min="12" max="28" :value="displaySettings.bodyFontSize" @input="updateTypographyMetric('bodyFontSize', $event.target.value, 12, 28)">
+                      <input class="misc-number-input" type="number" min="12" max="28" :value="displaySettings.bodyFontSize" @input="updateTypographyMetric('bodyFontSize', $event.target.value, 12, 28)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-range-header">
+                      <div class="misc-setting-label">行间距</div>
+                      <span class="misc-range-value">{{ displaySettings.bodyLineHeight }}</span>
+                    </div>
+                    <div class="misc-range-input">
+                      <input type="range" min="1.2" max="2.8" step="0.05" :value="displaySettings.bodyLineHeight" @input="updateTypographyMetric('bodyLineHeight', $event.target.value, 1.2, 2.8, 2)">
+                      <input class="misc-number-input" type="number" min="1.2" max="2.8" step="0.05" :value="displaySettings.bodyLineHeight" @input="updateTypographyMetric('bodyLineHeight', $event.target.value, 1.2, 2.8, 2)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-range-header">
+                      <div class="misc-setting-label">段间距</div>
+                      <span class="misc-range-value">{{ displaySettings.paragraphSpacing }}px</span>
+                    </div>
+                    <div class="misc-range-input">
+                      <input type="range" min="0" max="48" :value="displaySettings.paragraphSpacing" @input="updateTypographyMetric('paragraphSpacing', $event.target.value, 0, 48)">
+                      <input class="misc-number-input" type="number" min="0" max="48" :value="displaySettings.paragraphSpacing" @input="updateTypographyMetric('paragraphSpacing', $event.target.value, 0, 48)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-range-header">
+                      <div class="misc-setting-label">左右页边距</div>
+                      <span class="misc-range-value">{{ displaySettings.pagePaddingX }}px</span>
+                    </div>
+                    <div class="misc-range-input">
+                      <input type="range" min="0" max="72" :value="displaySettings.pagePaddingX" @input="updateTypographyMetric('pagePaddingX', $event.target.value, 0, 72)">
+                      <input class="misc-number-input" type="number" min="0" max="72" :value="displaySettings.pagePaddingX" @input="updateTypographyMetric('pagePaddingX', $event.target.value, 0, 72)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-range-header">
+                      <div class="misc-setting-label">上下页边距</div>
+                      <span class="misc-range-value">{{ displaySettings.pagePaddingY }}px</span>
+                    </div>
+                    <div class="misc-range-input">
+                      <input type="range" min="0" max="72" :value="displaySettings.pagePaddingY" @input="updateTypographyMetric('pagePaddingY', $event.target.value, 0, 72)">
+                      <input class="misc-number-input" type="number" min="0" max="72" :value="displaySettings.pagePaddingY" @input="updateTypographyMetric('pagePaddingY', $event.target.value, 0, 72)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-range-header">
+                      <div class="misc-setting-label">字间距</div>
+                      <span class="misc-range-value">{{ displaySettings.letterSpacing }}px</span>
+                    </div>
+                    <div class="misc-range-input">
+                      <input type="range" min="0" max="4" step="0.1" :value="displaySettings.letterSpacing" @input="updateTypographyMetric('letterSpacing', $event.target.value, 0, 4, 1)">
+                      <input class="misc-number-input" type="number" min="0" max="4" step="0.1" :value="displaySettings.letterSpacing" @input="updateTypographyMetric('letterSpacing', $event.target.value, 0, 4, 1)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-setting-label">标题颜色</div>
+                    <div class="misc-color-row">
+                      <input class="misc-color-input" type="color" :value="displaySettings.titleColor" @input="updateTypographyColor('titleColor', $event.target.value)">
+                      <input class="misc-text-input" type="text" :value="displaySettings.titleColor" @input="updateTypographyColor('titleColor', $event.target.value)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-setting-label">二级标题颜色</div>
+                    <div class="misc-color-row">
+                      <input class="misc-color-input" type="color" :value="displaySettings.h2Color" @input="updateTypographyColor('h2Color', $event.target.value)">
+                      <input class="misc-text-input" type="text" :value="displaySettings.h2Color" @input="updateTypographyColor('h2Color', $event.target.value)">
+                    </div>
+                  </div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-setting-label">三级标题颜色</div>
+                    <div class="misc-color-row">
+                      <input class="misc-color-input" type="color" :value="displaySettings.h3Color" @input="updateTypographyColor('h3Color', $event.target.value)">
+                      <input class="misc-text-input" type="text" :value="displaySettings.h3Color" @input="updateTypographyColor('h3Color', $event.target.value)">
+                    </div>
+                  </div>
+
+                  <p class="misc-panel-note">这些设置会进入预览、导出 HTML 和复制到公众号的内联样式，不需要污染 Markdown 正文。</p>
+                </div>
+
+                <div class="misc-panel-section">
+                  <div class="code-panel-section-title">字号</div>
+                  <div class="misc-button-grid misc-button-grid-font">
+                    <button
+                      v-for="option in fontScaleOptions"
+                      :key="`font-scale-${option.value}`"
+                      class="segmented-option-btn"
+                      :class="{ active: displaySettings.fontScale === option.value }"
+                      @click="setFontScale(option.value)"
+                    >
+                      <span>{{ option.label }}</span>
+                      <small>{{ option.meta }}</small>
+                    </button>
+                  </div>
+                  <p class="misc-panel-note">作用于容器、标题和正文等字号，复制到公众号与导出 HTML 会保留当前比例。</p>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="activePanel === 'image'">
+              <div class="misc-panel-stack">
+                <div class="misc-panel-section">
+                  <div class="code-panel-section-title">图片属性</div>
+
+                  <div class="misc-setting-row">
+                    <div class="misc-setting-label">模式</div>
+                    <div class="misc-button-grid misc-button-grid-dual">
+                      <button
+                        v-for="option in imageStyleModeOptions"
+                        :key="`image-style-mode-${option.value}`"
+                        class="segmented-option-btn"
+                        :class="{ active: displaySettings.imageStyleMode === option.value }"
+                        @click="setImageStyleMode(option.value)"
+                      >
+                        <span>{{ option.label }}</span>
+                        <small>{{ option.meta }}</small>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="misc-control-stack" :class="{ disabled: !isImageStyleCustom }">
+                    <div class="misc-setting-row">
+                      <div class="misc-range-header">
+                        <div class="misc-setting-label">图片宽度</div>
+                        <span class="misc-range-value">{{ displaySettings.imageWidth }}%</span>
+                      </div>
+                      <div class="misc-range-input">
+                        <input
+                          type="range"
+                          min="20"
+                          max="100"
+                          :value="displaySettings.imageWidth"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageMetric('imageWidth', $event.target.value, 20, 100)"
+                        >
+                        <input
+                          class="misc-number-input"
+                          type="number"
+                          min="20"
+                          max="100"
+                          :value="displaySettings.imageWidth"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageMetric('imageWidth', $event.target.value, 20, 100)"
+                        >
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-range-header">
+                        <div class="misc-setting-label">上间距</div>
+                        <span class="misc-range-value">{{ displaySettings.imageMarginTop }}px</span>
+                      </div>
+                      <div class="misc-range-input">
+                        <input
+                          type="range"
+                          min="0"
+                          max="200"
+                          :value="displaySettings.imageMarginTop"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageMetric('imageMarginTop', $event.target.value, 0, 200)"
+                        >
+                        <input
+                          class="misc-number-input"
+                          type="number"
+                          min="0"
+                          max="200"
+                          :value="displaySettings.imageMarginTop"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageMetric('imageMarginTop', $event.target.value, 0, 200)"
+                        >
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-range-header">
+                        <div class="misc-setting-label">下间距</div>
+                        <span class="misc-range-value">{{ displaySettings.imageMarginBottom }}px</span>
+                      </div>
+                      <div class="misc-range-input">
+                        <input
+                          type="range"
+                          min="0"
+                          max="200"
+                          :value="displaySettings.imageMarginBottom"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageMetric('imageMarginBottom', $event.target.value, 0, 200)"
+                        >
+                        <input
+                          class="misc-number-input"
+                          type="number"
+                          min="0"
+                          max="200"
+                          :value="displaySettings.imageMarginBottom"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageMetric('imageMarginBottom', $event.target.value, 0, 200)"
+                        >
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-setting-label">圆角模式</div>
+                      <div class="misc-button-grid misc-button-grid-dual">
+                        <button
+                          v-for="option in imageRadiusModeOptions"
+                          :key="`image-radius-mode-${option.value}`"
+                          class="segmented-option-btn compact"
+                          :class="{ active: displaySettings.imageRadiusMode === option.value }"
+                          :disabled="!isImageStyleCustom"
+                          @click="setImageRadiusMode(option.value)"
+                        >
+                          <span>{{ option.label }}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-range-header">
+                        <div class="misc-setting-label">圆角大小</div>
+                        <span class="misc-range-value">
+                          {{ displaySettings.imageRadiusMode === 'circle' ? '50%' : displaySettings.imageRadius + 'px' }}
+                        </span>
+                      </div>
+                      <div class="misc-range-input">
+                        <input
+                          type="range"
+                          min="0"
+                          max="360"
+                          :value="displaySettings.imageRadius"
+                          :disabled="!isImageStyleCustom || displaySettings.imageRadiusMode === 'circle'"
+                          @input="updateImageMetric('imageRadius', $event.target.value, 0, 360)"
+                        >
+                        <input
+                          class="misc-number-input"
+                          type="number"
+                          min="0"
+                          max="360"
+                          :value="displaySettings.imageRadius"
+                          :disabled="!isImageStyleCustom || displaySettings.imageRadiusMode === 'circle'"
+                          @input="updateImageMetric('imageRadius', $event.target.value, 0, 360)"
+                        >
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-setting-label">阴影</div>
+                      <div class="misc-shadow-grid">
+                        <label class="misc-shadow-field">
+                          <span>X</span>
+                          <input
+                            class="misc-number-input"
+                            type="number"
+                            min="-80"
+                            max="80"
+                            :value="displaySettings.imageShadowX"
+                            :disabled="!isImageStyleCustom"
+                            @input="updateImageMetric('imageShadowX', $event.target.value, -80, 80)"
+                          >
+                        </label>
+                        <label class="misc-shadow-field">
+                          <span>Y</span>
+                          <input
+                            class="misc-number-input"
+                            type="number"
+                            min="-80"
+                            max="80"
+                            :value="displaySettings.imageShadowY"
+                            :disabled="!isImageStyleCustom"
+                            @input="updateImageMetric('imageShadowY', $event.target.value, -80, 80)"
+                          >
+                        </label>
+                        <label class="misc-shadow-field">
+                          <span>Blur</span>
+                          <input
+                            class="misc-number-input"
+                            type="number"
+                            min="0"
+                            max="120"
+                            :value="displaySettings.imageShadowBlur"
+                            :disabled="!isImageStyleCustom"
+                            @input="updateImageMetric('imageShadowBlur', $event.target.value, 0, 120)"
+                          >
+                        </label>
+                        <label class="misc-shadow-field">
+                          <span>Spread</span>
+                          <input
+                            class="misc-number-input"
+                            type="number"
+                            min="-40"
+                            max="80"
+                            :value="displaySettings.imageShadowSpread"
+                            :disabled="!isImageStyleCustom"
+                            @input="updateImageMetric('imageShadowSpread', $event.target.value, -40, 80)"
+                          >
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-range-header">
+                        <div class="misc-setting-label">阴影透明度</div>
+                        <span class="misc-range-value">{{ Math.round(displaySettings.imageShadowOpacity * 100) }}%</span>
+                      </div>
+                      <div class="misc-range-input">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          :value="Math.round(displaySettings.imageShadowOpacity * 100)"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageShadowOpacity($event.target.value)"
+                        >
+                        <input
+                          class="misc-number-input"
+                          type="number"
+                          min="0"
+                          max="100"
+                          :value="Math.round(displaySettings.imageShadowOpacity * 100)"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageShadowOpacity($event.target.value)"
+                        >
+                      </div>
+                    </div>
+
+                    <div class="misc-setting-row">
+                      <div class="misc-setting-label">阴影颜色</div>
+                      <div class="misc-color-row">
+                        <input
+                          class="misc-color-input"
+                          type="color"
+                          :value="displaySettings.imageShadowColor"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageShadowColor($event.target.value)"
+                        >
+                        <input
+                          class="misc-text-input"
+                          type="text"
+                          :value="displaySettings.imageShadowColor"
+                          :disabled="!isImageStyleCustom"
+                          @input="updateImageShadowColor($event.target.value)"
+                        >
+                      </div>
+                    </div>
+
+                    <div class="misc-shadow-preview" :style="{
+                      boxShadow: `${displaySettings.imageShadowX}px ${displaySettings.imageShadowY}px ${displaySettings.imageShadowBlur}px ${displaySettings.imageShadowSpread}px ${displaySettings.imageShadowColor}${Math.round(displaySettings.imageShadowOpacity * 255).toString(16).padStart(2, '0')}`
+                    }">
+                      图片阴影预览
+                    </div>
+                  </div>
+                  <p class="misc-panel-note" v-if="!isImageStyleCustom">当前为默认模式，图片完全跟随主题本身样式，不受这里的自定义参数影响。</p>
+                  <p class="misc-panel-note" v-else>自定义模式会统一覆盖单图与多图拼版的上下间距、圆角和阴影效果。</p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+    </div>
+
+    <footer class="status-bar">
+      <span class="status-item" :class="getSaveStateClass()">{{ getSaveStateLabel() }}</span>
+      <span class="status-item">{{ charCount }} 字符 · {{ wordCount }} 词 · 预计 {{ readTime }} 分钟</span>
+      <span class="status-item">最后保存：{{ lastSavedTime }}</span>
+    </footer>
+
+    <transition name="side-panel">
+      <div v-if="settingsOpen" class="settings-overlay">
+        <div class="settings-panel">
+          <div class="settings-panel-header">
+            <h3 class="settings-panel-title">设置</h3>
+            <button class="settings-panel-close" @click="toggleSettingsPanel">
+              <svg class="lucide lucide-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+          </div>
+          <div class="settings-panel-body">
+            <div class="panel-settings-group">
+              <label class="settings-label">
+                <span>同步滚动</span>
+                <div class="toggle-switch" :class="{ active: syncScrollEnabled }" @click="syncScrollEnabled = !syncScrollEnabled"></div>
+              </label>
+              <div class="settings-note">自动保存间隔：5 秒（固定）</div>
+            </div>
+            <div class="panel-settings-group">
+              <div class="settings-label">快捷键</div>
+              <div class="settings-shortcuts">
+                <div><kbd>Ctrl</kbd>+<kbd>S</kbd> 保存</div>
+                <div><kbd>Ctrl</kbd>+<kbd>B</kbd> 加粗</div>
+                <div><kbd>Ctrl</kbd>+<kbd>I</kbd> 斜体</div>
+                <div><kbd>Ctrl</kbd>+<kbd>K</kbd> 链接</div>
+                <div><kbd>Tab</kbd> 缩进</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <transition name="toast-fade">
+      <div v-if="toastState.show" class="toast-container">
+        <div class="toast" :class="'toast-' + toastState.type">{{ toastState.message }}</div>
+      </div>
+    </transition>
+
+    <!-- 保存/重命名排版预设弹窗 -->
+    <template v-if="layoutPresetDialog.show">
+      <div class="modal-overlay" @click="cancelSaveLayoutPreset">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>{{ layoutPresetDialog.mode === 'rename' ? '重命名排版' : '保存当前排版' }}</h3>
+          </div>
+          <div class="modal-body">
+            <p>{{ layoutPresetDialog.mode === 'rename' ? '修改这个排版预设的名称。' : '给这套排版起一个名字，下次可以在「我的主题」中直接使用。' }}</p>
+            <input
+              v-model="layoutPresetDialog.name"
+              class="modal-text-input layout-preset-name-input"
+              type="text"
+              placeholder="例如：温柔正文排版"
+              @keydown.enter="confirmSaveLayoutPreset"
+            >
+          </div>
+          <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" @click="cancelSaveLayoutPreset">取消</button>
+            <button class="modal-btn modal-btn-primary" @click="confirmSaveLayoutPreset">
+              {{ layoutPresetDialog.mode === 'rename' ? '确认' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- 删除确认弹窗 -->
+    <template v-if="deleteConfirm.show">
+      <div class="modal-overlay" @click="cancelDelete">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>确认删除</h3>
+          </div>
+          <div class="modal-body">
+            <p>确定删除「{{ deleteConfirm.docTitle }}」吗？</p>
+            <p class="modal-warning">此操作无法撤销。</p>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" @click="cancelDelete">取消</button>
+            <button class="modal-btn modal-btn-danger" @click="confirmDelete">删除</button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <script type="module" src="assets/scripts/main.js?v=20260707-cleanup"></script>
+</body>
+</html>
