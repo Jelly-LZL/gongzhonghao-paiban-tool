@@ -59,13 +59,13 @@ http://127.0.0.1:8765/
 普通 Markdown 图片：
 
 ```markdown
-![图片说明](./图片/example.jpg)
+![图片说明](./assets/images/avatar.jpg)
 ```
 
 带局部样式参数：
 
 ```markdown
-![生活切片](./图片/example.jpg){width=80% height=auto fit=contain radius=16 caption=生活切片}
+![头像示例](./assets/images/avatar.jpg){width=80% height=auto fit=contain radius=16 caption=头像示例}
 ```
 
 常用参数：
@@ -85,8 +85,6 @@ http://127.0.0.1:8765/
 ├── LICENSE
 ├── start.ps1
 ├── start.sh
-├── 图片/
-│   └── 示例图片
 └── assets/
     ├── images/
     │   └── avatar.jpg

@@ -27,6 +27,7 @@ const { createApp, ref, watch, nextTick, onMounted, computed } = window.Vue;
 
 const UNTITLED_PREFIX = '新文章';
 const CODE_THEME_STORAGE_KEY = 'zhizi-wechat-md:currentCodeTheme';
+const DEFAULT_SAMPLE_IMAGE = './assets/images/avatar.jpg';
 
 const markdownInput = ref('');
 const renderedContent = ref('');
@@ -193,12 +194,26 @@ function buildDocument({
     id,
     manualTitle,
     title,
-    content,
+    content: replaceLegacySampleImages(content),
     createdAt,
     updatedAt,
     sortOrder,
     dirty
   };
+}
+
+function replaceLegacySampleImages(content) {
+  if (typeof content !== 'string') return content;
+
+  return content
+    .replace(
+      /!\[童年照片\]\([^)]+\)(?:\{[^}\n]*\})?/g,
+      `![头像示例](${DEFAULT_SAMPLE_IMAGE}){width=42% radius=999 caption=头像示例}`
+    )
+    .replace(
+      /!\[生活切片\]\([^)]+\)(?:\{[^}\n]*\})?/g,
+      `![排版示例](${DEFAULT_SAMPLE_IMAGE}){width=42% radius=999 caption=排版示例}`
+    );
 }
 
 function getActiveDocument() {
@@ -1490,13 +1505,13 @@ function loadDefaultExample() {
 
 写作不只是把内容发出去，也是在给未来的自己留下一条线索。每一次修改、每一张图片、每一个标题，都是那条线索上的节点。
 
-![童年照片](./图片/微信图片_20260304220945_159_2.jpg){width=88% radius=18 caption=童年照片}
+![头像示例](${DEFAULT_SAMPLE_IMAGE}){width=42% radius=999 caption=头像示例}
 
 ### 为什么要做这个排版台
 
 我希望 Markdown 写完之后，不需要再到公众号编辑器里重新排版。左侧继续写作，右侧直接预览，最后复制到公众号即可。
 
-![生活切片](./图片/微信图片_20260304221154_160_2.jpg){width=88% radius=18 caption=生活切片}
+![排版示例](${DEFAULT_SAMPLE_IMAGE}){width=42% radius=999 caption=排版示例}
 
 > 最理想的工作流，是写作、存档、排版和发布都在同一条路径上自然发生。
 
