@@ -2,6 +2,10 @@
 
 一个面向微信公众号写作的本地 Markdown 排版工具。它适合把文章写在 Obsidian 或其他 Markdown 编辑器里，再在网页中预览、微调样式，并复制到公众号编辑器。
 
+## 在线试用
+
+[点击打开公众号排版台](https://jelly-lzl.github.io/gongzhonghao-paiban-tool/)
+
 ## 功能
 
 - Markdown 编辑与实时预览，支持桌面、平板、手机视图。
